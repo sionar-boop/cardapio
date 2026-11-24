@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#B83A1F">
+<title>Cardápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: caseiro, direto, apetitoso — pedido rápido pelo celular
+   IDEA: a comanda de papel da marmitaria, presa no balcão
+   PICTURE: faixa de tomate no topo com o nome, cartões de prato como itens de comanda
+   COLOUR and TYPE: tomate #B83A1F, papel branco, tinta marrom-escura; Baloo 2 + Inter
+   LAYOUT: lista de pratos em uma coluna, barra fixa do pedido embaixo, painel de finalizar */
+:root{--tom:#B83A1F;--tom2:#8F2A13;--ink:#2A1C14;--mute:#7A6A5E;--line:#EFE5DC;--bg:#FBF7F3;--paper:#fff;--ok:#1F7A3E}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip;padding-bottom:110px}
+h1,h2,h3{font-family:'Baloo 2',Inter,sans-serif;margin:0;line-height:1.05}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;min-height:48px;border-radius:14px;border:2px solid var(--line);background:var(--paper);padding:0 16px;font-weight:700}
+button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offset:2px}
+.pri{background:var(--tom);border-color:var(--tom);color:#fff}
+.topo{background:radial-gradient(120% 90% at 100% 0,#D9572F,transparent 60%),var(--tom);color:#fff;padding:28px max(5vw,18px) 34px;position:relative}
+.topo h1{font-size:clamp(34px,9vw,52px)}
+.topo p{margin:4px 0 0;color:#FFE3D6;font-size:17px}
+.topo .aberto{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;background:#ffffff26;padding:5px 10px;border-radius:99px}
+.wrap{max-width:720px;margin:0 auto;padding:0 max(4vw,14px)}
+.cat{margin:26px 0 10px;font-size:24px}
+.prato{display:flex;align-items:center;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:14px 14px 14px 16px;margin-bottom:10px}
+.prato .nome{font-weight:700;font-size:18px}
+.prato .preco{color:var(--tom);font-weight:800;font-size:17px;white-space:nowrap}
+.prato button{margin-left:auto;flex:none}
+.add{background:var(--tom);border-color:var(--tom);color:#fff;width:52px;font-size:26px;padding:0}
+.vazio,.erro{padding:18px;border-radius:14px;margin:18px 0}
+.erro{background:#FDE8E4;color:#8F2A13;font-weight:600}
+.vazio{color:var(--mute);text-align:center}
+.barra{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:12px max(4vw,14px) calc(12px + env(safe-area-inset-bottom));z-index:5;display:none}
+.barra.on{display:block}
+.barra button{width:100%;max-width:720px;display:block;margin:0 auto;min-height:56px;font-size:18px}
+.painel{position:fixed;inset:0;background:#2A1C14b3;display:none;align-items:flex-end;justify-content:center;z-index:10}
+.painel.on{display:flex}
+.folha{background:var(--bg);width:100%;max-width:640px;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px 18px 30px}
+.folha h2{font-size:28px;margin-bottom:12px}
+.linha{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+.linha .n{font-weight:700}
+.qtd{display:flex;align-items:center;gap:8px}
+.qtd button{width:44px;min-height:44px;padding:0;font-size:22px}
+.qtd b{min-width:22px;text-align:center}
+.linha input{grid-column:1/-1}
+label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
+input[type=text],input[type=search],input[type=password]{width:100%;min-height:50px;border:1px solid #E2D6CB;border-radius:12px;padding:10px 12px;background:var(--paper);font-size:16px}
+.g2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}
+.sug{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin-top:4px;overflow:hidden}
+.sug button{display:flex;justify-content:space-between;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;font-weight:600;min-height:46px}
+.dica{font-size:14px;color:var(--mute);margin:6px 0 0}
+.tot{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:16px 0}
+.tot div{display:flex;justify-content:space-between;padding:3px 0}
+.tot .t{font-size:22px;font-weight:800;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.zap{background:#1F9D55;border-color:#1F9D55;color:#fff;width:100%;min-height:58px;font-size:18px}
+.ok{text-align:center;padding:10px 0}
+.ok .cod{font-family:'Baloo 2';font-size:56px;color:var(--tom);line-height:1}
+.fechar{float:right;min-height:40px;border:0;background:none;font-size:15px;color:var(--mute)}
+footer{text-align:center;color:var(--mute);font-size:13px;margin:34px 0}
+footer a{color:var(--mute)}
+/* admin */
+.adm table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:14px;overflow:hidden}
+.adm td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.adm td input[type=text]{min-height:44px}
+.adm .num{width:96px}
+.adm h3{font-size:22px;margin:22px 0 8px}
+.adm .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sw{width:22px;height:22px;accent-color:var(--tom)}
+@media(max-width:520px){.adm td{display:block;border:0;padding:4px 8px}.adm tr{display:block;border-bottom:1px solid var(--line);padding:8px 0}.adm .num{width:100%}}
+@media(prefers-reduced-motion:no-preference){.prato button:active{transform:scale(.94)}}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="wrap" style="padding:0">
+    <h1 id="nome">Cardápio</h1>
+    <p id="sub"></p>
+    <span class="aberto" id="estado">Carregando cardápio…</span>
+  </div>
+</header>
+
+<main class="wrap" id="menu"></main>
+<main class="wrap adm" id="admin" hidden></main>
+
+<footer><a href="#admin" id="linkAdmin">Área do administrador</a></footer>
+
+<div class="barra" id="barra"><button class="pri" id="verPedido">Ver meu pedido</button></div>
+
+<div class="painel" id="painel" role="dialog" aria-modal="true" aria-labelledby="tituloPedido">
+  <div class="folha" id="folha"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+{
+const C = window.CONFIG;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reais = c => 'R$ ' + (Math.floor(Math.abs(c)/100)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ',' + String(Math.abs(c)%100).padStart(2,'0');
+const lerReais = t => { t = String(t).replace(/R\$|\s/g,''); if (!/^\d+(,\d{1,2})?$/.test(t)) return null; const [a,b=''] = t.split(','); return +a*100 + +(b+'00').slice(0,2); };
+const cod = n => 'S-' + String(n).padStart(3,'0');
+const CATS = { marmitex: 'Marmitex', bebida: 'Bebidas', outros: 'Outros' };
+
+// ---------- acesso ao Supabase (sem biblioteca) ----------
+async function api(caminho, { metodo = 'GET', corpo, token } = {}) {
+  const r = await fetch(C.supabaseUrl + caminho, {
+    method: metodo,
+    headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + (token || C.supabaseKey), 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  });
+  const txt = await r.text();
+  const dados = txt ? JSON.parse(txt) : null;
+  if (!r.ok) throw new Error((dados && (dados.message || dados.msg || dados.error_description)) || 'Erro ' + r.status);
+  return dados;
+}
+
+let produtos = [], bairros = [], carrinho = [], bairroSel = null;
+try { carrinho = JSON.parse(sessionStorage.getItem('carrinho') || '[]'); } catch { carrinho = []; }
+const salvarCarrinho = () => { try { sessionStorage.setItem('carrinho', JSON.stringify(carrinho)); } catch {} };
+
+$('#nome').textContent = C.nome;
+$('#sub').textContent = C.subtitulo;
+document.title = C.nome + ' — Cardápio';
+
+async function carregar() {
+  try {
+    [produtos, bairros] = await Promise.all([
+      api('/rest/v1/produtos?select=id,nome,categoria,preco_centavos,ordem&ativo=eq.true&order=ordem,nome'),
+      api('/rest/v1/bairros?select=id,nome,taxa_centavos&ativo=eq.true&order=nome'),
+    ]);
+    // tira do carrinho o que saiu do cardápio e atualiza preços
+    carrinho = carrinho.filter(l => produtos.some(p => p.id === l.id)).map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)) }));
+    $('#estado').textContent = 'Faça seu pedido pelo site 👇';
+  } catch (e) {
+    $('#estado').textContent = 'Sem conexão';
+    $('#menu').innerHTML = `<div class="erro">Não conseguimos carregar o cardápio agora. ${C.whatsapp ? `<a href="https://wa.me/${C.whatsapp}">Peça pelo WhatsApp</a>.` : ''}</div>`;
+    return;
+  }
+  desenharMenu();
+  desenharBarra();
+}
+const pick = p => ({ nome: p.nome, preco: p.preco_centavos, categoria: p.categoria });
+
+function desenharMenu() {
+  if (!produtos.length) { $('#menu').innerHTML = '<p class="vazio">O cardápio de hoje ainda não foi publicado.</p>'; return; }
+  let h = '';
+  for (const c of ['marmitex','bebida','outros']) {
+    const lista = produtos.filter(p => p.categoria === c);
+    if (!lista.length) continue;
+    h += `<h2 class="cat">${CATS[c]}</h2>` + lista.map(p => `
+      <div class="prato"><div><div class="nome">${esc(p.nome)}</div><div class="preco">${reais(p.preco_centavos)}</div></div>
+      <button class="add" data-add="${p.id}" aria-label="Adicionar ${esc(p.nome)}">+</button></div>`).join('');
+  }
+  $('#menu').innerHTML = h;
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const p = produtos.find(x => x.id === b.dataset.add);
+    carrinho.push({ id: p.id, ...pick(p), qtd: 1, obs: '' }); // cada toque = uma marmitex separada
+    salvarCarrinho(); desenharBarra();
+    b.textContent = '✓'; setTimeout(() => b.textContent = '+', 700);
+  });
+}
+
+const subtotal = () => carrinho.reduce((s, l) => s + l.preco * l.qtd, 0);
+function desenharBarra() {
+  const n = carrinho.reduce((s, l) => s + l.qtd, 0);
+  $('#barra').classList.toggle('on', n > 0 && !location.hash.startsWith('#admin'));
+  $('#verPedido').textContent = `Ver meu pedido (${n}) · ${reais(subtotal())}`;
+}
+
+// ---------- painel do pedido ----------
+let form = { nome: '', bairroTexto: '', rua: '', numero: '', complemento: '' };
+function abrirPedido() { $('#painel').classList.add('on'); desenharPedido(); }
+function fecharPainel() { $('#painel').classList.remove('on'); }
+$('#verPedido').onclick = abrirPedido;
+$('#painel').onclick = e => { if (e.target.id === 'painel') fecharPainel(); };
+
+function desenharPedido(erro) {
+  const taxa = bairroSel ? bairroSel.taxa_centavos : 0;
+  $('#folha').innerHTML = `
+    <button class="fechar" id="fechar">Fechar ✕</button>
+    <h2 id="tituloPedido">Seu pedido</h2>
+    ${carrinho.map((l, i) => `
+      <div class="linha">
+        <div><div class="n">${esc(l.nome)}</div><div class="dica">${l.qtd} × ${reais(l.preco)} = <b>${reais(l.qtd*l.preco)}</b></div></div>
+        <div class="qtd"><button data-m="${i}" aria-label="Menos">−</button><b>${l.qtd}</b><button data-p="${i}" aria-label="Mais">+</button></div>
+        ${l.categoria === 'marmitex' ? `<input type="text" data-o="${i}" value="${esc(l.obs)}" maxlength="120" placeholder="Carne / observação (ex.: frango, sem salada)">` : ''}
+      </div>`).join('') || '<p class="vazio">Seu pedido está vazio.</p>'}
+    <p class="dica">Quer duas marmitex com carnes diferentes? Toque de novo no + do cardápio: cada toque vira uma marmitex separada.</p>
+
+    <label for="fNome">Seu nome (opcional)</label>
+    <input type="text" id="fNome" maxlength="60" value="${esc(form.nome)}" autocomplete="name">
+
+    <label for="fBairro">Bairro para entrega</label>
+    <input type="search" id="fBairro" value="${esc(bairroSel ? bairroSel.nome : form.bairroTexto)}" placeholder="Digite seu bairro" autocomplete="off">
+    <div id="sug"></div>
+    ${bairroSel ? `<p class="dica">Entrega para <b>${esc(bairroSel.nome)}</b>: ${reais(bairroSel.taxa_centavos)}</p>` : '<p class="dica">Se não encontrar seu bairro ou preferir, deixe em branco: combinamos pelo WhatsApp.</p>'}
+    <div class="g2">
+      <div><label for="fRua">Rua</label><input type="text" id="fRua" maxlength="120" value="${esc(form.rua)}" autocomplete="address-line1"></div>
+      <div><label for="fNum">Número</label><input type="text" id="fNum" maxlength="20" value="${esc(form.numero)}" inputmode="numeric"></div>
+    </div>
+    <label for="fComp">Complemento / referência (opcional)</label>
+    <input type="text" id="fComp" maxlength="120" value="${esc(form.complemento)}">
+
+    <div class="tot">
+      <div><span>Produtos</span><span>${reais(subtotal())}</span></div>
+      <div><span>Entrega</span><span>${bairroSel ? reais(taxa) : 'a combinar'}</span></div>
+      <div class="t"><span>Total</span><span>${reais(subtotal() + taxa)}</span></div>
+    </div>
+    ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
+    <button class="zap" id="pedir" ${carrinho.length ? '' : 'disabled'}>Pedir pelo WhatsApp</button>
+    <p class="dica" style="text-align:center">Vamos abrir o WhatsApp com seu pedido pronto. É só tocar em enviar.</p>`;
+
+  $('#fechar').onclick = fecharPainel;
+  document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const l = carrinho[+b.dataset.m]; l.qtd--; if (l.qtd < 1) carrinho.splice(+b.dataset.m, 1); salvarCarrinho(); desenharBarra(); guardarForm(); desenharPedido(); });
+  document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const l = carrinho[+b.dataset.p]; if (l.qtd < 20) l.qtd++; salvarCarrinho(); desenharBarra(); guardarForm(); desenharPedido(); });
+  document.querySelectorAll('[data-o]').forEach(i => i.oninput = () => { carrinho[+i.dataset.o].obs = i.value; salvarCarrinho(); });
+  const fb = $('#fBairro');
+  fb.oninput = () => { bairroSel = null; form.bairroTexto = fb.value; sugerir(fb.value); };
+  fb.onfocus = () => sugerir(fb.value);
+  $('#pedir').onclick = pedir;
+}
+function guardarForm() {
+  if (!$('#fNome')) return;
+  form = { nome: $('#fNome').value, bairroTexto: $('#fBairro').value, rua: $('#fRua').value, numero: $('#fNum').value, complemento: $('#fComp').value };
+}
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+function sugerir(t) {
+  const q = norm(t);
+  const lista = bairros.filter(b => !q || norm(b.nome).includes(q)).slice(0, 8);
+  $('#sug').innerHTML = q || document.activeElement === $('#fBairro')
+    ? (lista.length ? `<div class="sug">${lista.map(b => `<button data-b="${b.id}"><span>${esc(b.nome)}</span><span>${reais(b.taxa_centavos)}</span></button>`).join('')}</div>`
+                    : `<p class="dica">Bairro não encontrado. Pode continuar: combinamos a entrega no WhatsApp.</p>`)
+    : '';
+  document.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { bairroSel = bairros.find(x => x.id === b.dataset.b); guardarForm(); desenharPedido(); });
+}
+
+function mensagem(r) {
+  const linhas = r.itens.map(i => `${i.quantidade}× ${i.nome}${i.observacao ? ` (${i.observacao})` : ''} — ${reais(i.preco_centavos * i.quantidade)}`);
+  const end = [form.rua && form.rua + (form.numero ? ', ' + form.numero : ''), form.complemento, r.bairro_nome].filter(Boolean).join(' — ');
+  return [
+    r.codigo ? `Olá! Quero fazer o pedido *${cod(r.codigo)}* pelo cardápio:` : 'Olá! Quero fazer este pedido pelo cardápio:',
+    '', ...linhas, '',
+    `Produtos: ${reais(r.subtotal_centavos)}`,
+    r.bairro_nome ? `Entrega (${r.bairro_nome}): ${reais(r.taxa_centavos)}` : 'Entrega: a combinar',
+    `*Total: ${reais(r.subtotal_centavos + (r.taxa_centavos || 0))}*`, '',
+    `Endereço: ${end || 'vou informar aqui'}`,
+    form.nome ? `Nome: ${form.nome}` : '',
+  ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
+}
+const linkZap = txt => `https://wa.me/${C.whatsapp}?text=${encodeURIComponent(txt)}`;
+
+let enviando = false;
+async function pedir() {
+  if (enviando) return;
+  guardarForm();
+  if (!C.whatsapp) return desenharPedido('O WhatsApp do restaurante ainda não foi configurado.');
+  enviando = true;
+  $('#pedir').textContent = 'Registrando pedido…';
+  let r;
+  try {
+    r = await api('/rest/v1/rpc/criar_pedido_site', { metodo: 'POST', corpo: {
+      p_itens: carrinho.map(l => ({ produto_id: l.id, quantidade: l.qtd, observacao: l.obs })),
+      p_bairro_id: bairroSel ? bairroSel.id : null,
+      p_rua: form.rua, p_numero: form.numero, p_complemento: form.complemento, p_nome: form.nome,
+    }});
+  } catch (e) {
+    enviando = false;
+    // não registrou: oferece mandar só pelo WhatsApp (sem código)
+    const semCodigo = { codigo: null, itens: carrinho.map(l => ({ nome: l.nome, quantidade: l.qtd, observacao: l.obs, preco_centavos: l.preco })),
+      subtotal_centavos: subtotal(), taxa_centavos: bairroSel ? bairroSel.taxa_centavos : 0, bairro_nome: bairroSel ? bairroSel.nome : null };
+    desenharPedido(e.message + ' Você ainda pode enviar pelo WhatsApp.');
+    $('#pedir').textContent = 'Enviar só pelo WhatsApp';
+    $('#pedir').onclick = () => { location.href = linkZap(mensagem(semCodigo)); };
+    return;
+  }
+  enviando = false;
+  const txt = mensagem(r);
+  carrinho = []; salvarCarrinho(); desenharBarra();
+  $('#folha').innerHTML = `
+    <div class="ok">
+      <p class="dica">Seu pedido foi registrado</p>
+      <div class="cod">${cod(r.codigo)}</div>
+      <p>Total: <b>${reais(r.total_centavos)}</b>${r.bairro_nome ? '' : ' + entrega a combinar'}</p>
+      <a href="${linkZap(txt)}"><button class="zap">Abrir o WhatsApp e enviar</button></a>
+      <p class="dica">Se o WhatsApp não abriu, toque no botão acima. Envie a mensagem para confirmarmos seu pedido.</p>
+      <button id="novo" style="margin-top:10px">Fazer outro pedido</button>
+    </div>`;
+  $('#novo').onclick = () => { fecharPainel(); };
+  location.href = linkZap(txt);
+}
+
+// ---------- área do administrador ----------
+let token = null;
+try { token = sessionStorage.getItem('adm'); } catch {}
+function rota() {
+  const adm = location.hash === '#admin';
+  $('#menu').hidden = adm; $('#admin').hidden = !adm;
+  $('#linkAdmin').textContent = adm ? 'Voltar ao cardápio' : 'Área do administrador';
+  $('#linkAdmin').href = adm ? '#' : '#admin';
+  desenharBarra();
+  if (adm) desenharAdmin();
+}
+window.addEventListener('hashchange', rota);
+
+async function desenharAdmin(msg) {
+  const el = $('#admin');
+  if (!token) {
+    el.innerHTML = `<h2 class="cat">Administrador</h2>
+      <form id="login"><label for="senha">Senha do administrador</label>
+      <input type="password" id="senha" autocomplete="current-password">
+      ${msg ? `<div class="erro">${esc(msg)}</div>` : ''}
+      <div class="acoes"><button class="pri">Entrar</button></div></form>`;
+    $('#login').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        const r = await api('/auth/v1/token?grant_type=password', { metodo: 'POST', corpo: { email: C.emailAdmin, password: $('#senha').value } });
+        token = r.access_token; try { sessionStorage.setItem('adm', token); } catch {}
+        desenharAdmin();
+      } catch { desenharAdmin('Senha incorreta.'); }
+    };
+    return;
+  }
+  let prods, bairs;
+  try {
+    [prods, bairs] = await Promise.all([
+      api('/rest/v1/produtos?select=*&order=ordem,nome', { token }),
+      api('/rest/v1/bairros?select=*&order=nome', { token }),
+    ]);
+  } catch (e) { token = null; try { sessionStorage.removeItem('adm'); } catch {} return desenharAdmin('Entre de novo (' + e.message + ').'); }
+  el.innerHTML = `<h2 class="cat">Administrador</h2>
+    <p class="dica">O que você muda aqui aparece no cardápio e no aplicativo na hora. Pedidos já feitos guardam o preço antigo.</p>
+    ${msg ? `<div class="erro" style="background:#E6F4EA;color:#1F5E33">${esc(msg)}</div>` : ''}
+    <h3>Produtos</h3>
+    <table><tbody>${prods.map(p => `<tr data-prod="${p.id}">
+      <td><input type="text" value="${esc(p.nome)}" data-k="nome" aria-label="Nome"></td>
+      <td class="num"><input type="text" value="${reais(p.preco_centavos).replace('R$ ','')}" data-k="preco" inputmode="decimal" aria-label="Preço"></td>
+      <td><label style="margin:0;display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" class="sw" data-k="ativo" ${p.ativo ? 'checked' : ''}> à venda</label></td>
+      <td><button data-salvar-prod>Salvar</button> <button data-del-prod aria-label="Excluir">🗑</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="acoes"><input type="text" id="npNome" placeholder="Novo produto" style="flex:2"><input type="text" id="npPreco" placeholder="Preço" inputmode="decimal" style="flex:1">
+      <select id="npCat" style="min-height:50px;border-radius:12px;border:1px solid #E2D6CB;padding:0 8px"><option value="marmitex">Marmitex</option><option value="bebida">Bebida</option><option value="outros">Outros</option></select>
+      <button class="pri" id="npAdd">Adicionar</button></div>
+    <h3>Bairros e taxa de entrega</h3>
+    <table><tbody>${bairs.map(b => `<tr data-bairro="${b.id}">
+      <td><input type="text" value="${esc(b.nome)}" data-k="nome" aria-label="Bairro"></td>
+      <td class="num"><input type="text" value="${reais(b.taxa_centavos).replace('R$ ','')}" data-k="taxa" inputmode="decimal" aria-label="Taxa"></td>
+      <td><label style="margin:0;display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" class="sw" data-k="ativo" ${b.ativo ? 'checked' : ''}> ativo</label></td>
+      <td><button data-salvar-bairro>Salvar</button> <button data-del-bairro aria-label="Excluir">🗑</button></td></tr>`).join('') || '<tr><td>Nenhum bairro cadastrado.</td></tr>'}
+    </tbody></table>
+    <div class="acoes"><input type="text" id="nbNome" placeholder="Novo bairro" style="flex:2"><input type="text" id="nbTaxa" placeholder="Taxa" inputmode="decimal" style="flex:1"><button class="pri" id="nbAdd">Adicionar</button></div>
+    <div class="acoes" style="margin-top:24px"><button id="sair">Sair</button></div>`;
+
+  const val = (tr, k) => tr.querySelector(`[data-k="${k}"]`);
+  const fazer = async (fn, ok) => { try { await fn(); await carregar(); desenharAdmin(ok); } catch (e) { alertar(e.message); } };
+  const alertar = m => { const d = document.createElement('div'); d.className = 'erro'; d.textContent = m; el.prepend(d); scrollTo(0,0); };
+  el.querySelectorAll('[data-salvar-prod]').forEach(b => b.onclick = () => { const tr = b.closest('tr'); const c = lerReais(val(tr,'preco').value);
+    if (c === null) return alertar('Preço inválido. Ex.: 22,00');
+    fazer(() => api(`/rest/v1/produtos?id=eq.${tr.dataset.prod}`, { metodo: 'PATCH', token, corpo: { nome: val(tr,'nome').value.trim(), preco_centavos: c, ativo: val(tr,'ativo').checked } }), 'Produto salvo.'); });
+  el.querySelectorAll('[data-del-prod]').forEach(b => b.onclick = () => { const tr = b.closest('tr');
+    if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Confirmar?'; return; }
+    fazer(() => api(`/rest/v1/produtos?id=eq.${tr.dataset.prod}`, { metodo: 'DELETE', token }), 'Produto excluído.'); });
+  $('#npAdd').onclick = () => { const c = lerReais($('#npPreco').value); const n = $('#npNome').value.trim();
+    if (!n || c === null) return alertar('Preencha nome e preço do produto.');
+    fazer(() => api('/rest/v1/produtos', { metodo: 'POST', token, corpo: { nome: n, preco_centavos: c, categoria: $('#npCat').value, ativo: true, ordem: 99 } }), 'Produto adicionado.'); };
+  el.querySelectorAll('[data-salvar-bairro]').forEach(b => b.onclick = () => { const tr = b.closest('tr'); const c = lerReais(val(tr,'taxa').value);
+    if (c === null) return alertar('Taxa inválida. Ex.: 7,00');
+    fazer(() => api(`/rest/v1/bairros?id=eq.${tr.dataset.bairro}`, { metodo: 'PATCH', token, corpo: { nome: val(tr,'nome').value.trim(), taxa_centavos: c, ativo: val(tr,'ativo').checked } }), 'Bairro salvo.'); });
+  el.querySelectorAll('[data-del-bairro]').forEach(b => b.onclick = () => { const tr = b.closest('tr');
+    if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Confirmar?'; return; }
+    fazer(() => api(`/rest/v1/bairros?id=eq.${tr.dataset.bairro}`, { metodo: 'DELETE', token }), 'Bairro excluído.'); });
+  $('#nbAdd').onclick = () => { const c = lerReais($('#nbTaxa').value); const n = $('#nbNome').value.trim();
+    if (!n || c === null) return alertar('Preencha nome e taxa do bairro.');
+    fazer(() => api('/rest/v1/bairros', { metodo: 'POST', token, corpo: { nome: n, taxa_centavos: c } }), 'Bairro adicionado.'); };
+  $('#sair').onclick = () => { token = null; try { sessionStorage.removeItem('adm'); } catch {} location.hash = ''; };
+}
+
+carregar().then(rota);
+}
+</script>
+</body>
+</html>

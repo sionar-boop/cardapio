@@ -32,6 +32,9 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .prato .preco{color:var(--tom);font-weight:800;font-size:17px;white-space:nowrap}
 .prato button{margin-left:auto;flex:none}
 .add{background:var(--tom);border-color:var(--tom);color:#fff;width:52px;font-size:26px;padding:0}
+.principal{font-size:30px;margin-top:24px}
+.acompanha{margin:2px 0 16px;font-size:17px;line-height:1.45;color:var(--ink);background:#FFF1E8;border-left:4px solid var(--tom);border-radius:10px;padding:10px 14px}
+.acompanha b{color:var(--tom2)}
 .acomp{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
 .acomp div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:8px;text-align:center;font-weight:600;font-size:15px}
 .acomp img,.acomp .sem{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px;background:#F6E7DC}
@@ -172,11 +175,12 @@ function desenharMenu() {
   const opcoes = cardapio.filter(c => c.tipo === 'opcao');
   const avulsos = produtos.filter(p => p.categoria !== 'marmitex');
   let h = '';
+  h += `<h2 class="cat principal">Escolha sua opção</h2>`;
   if (acomps.length) {
-    h += `<h2 class="cat">Cardápio de hoje</h2><p class="incl">Acompanhamentos que vêm em todas as marmitex:</p>
-      <div class="acomp">${acomps.map(a => `<div>${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy">` : '<span class="sem">🍽️</span>'}${esc(a.nome)}</div>`).join('')}</div>`;
+    const nomes = acomps.map(a => a.nome);
+    const lista = nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0];
+    h += `<p class="acompanha">Todas acompanham <b>${esc(lista.toLowerCase().replace(/^./, c => c.toUpperCase()))}</b>.</p>`;
   }
-  h += `<h2 class="cat">Escolha sua opção</h2>`;
   if (!opcoes.length) h += '<p class="vazio">As opções de hoje ainda não foram publicadas. Chame no WhatsApp!</p>';
   h += opcoes.map(o => {
     const tams = tamanhosDa(o);

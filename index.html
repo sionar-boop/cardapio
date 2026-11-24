@@ -35,6 +35,8 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .principal{font-size:30px;margin-top:24px}
 .acompanha{margin:2px 0 16px;font-size:17px;line-height:1.45;color:var(--ink);background:#FFF1E8;border-left:4px solid var(--tom);border-radius:10px;padding:10px 14px}
 .acompanha b{color:var(--tom2)}
+.acompanha .ac{white-space:nowrap}
+.acompanha img{width:22px;height:22px;border-radius:50%;object-fit:cover;vertical-align:-5px;margin-right:4px;border:1px solid #F3C9B8}
 .acomp{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
 .acomp div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:8px;text-align:center;font-weight:600;font-size:15px}
 .acomp img,.acomp .sem{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px;background:#F6E7DC}
@@ -177,9 +179,11 @@ function desenharMenu() {
   let h = '';
   h += `<h2 class="cat principal">Escolha sua opção</h2>`;
   if (acomps.length) {
-    const nomes = acomps.map(a => a.nome);
-    const lista = nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0];
-    h += `<p class="acompanha">Todas acompanham <b>${esc(lista.toLowerCase().replace(/^./, c => c.toUpperCase()))}</b>.</p>`;
+    // nome em destaque; se tiver foto, ela fica pequenininha no cantinho, ao lado do nome
+    const item = a => `<span class="ac">${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy">` : ''}${esc(a.nome)}</span>`;
+    const partes = acomps.map(item);
+    const lista = partes.length > 1 ? partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1] : partes[0];
+    h += `<p class="acompanha">Todas acompanham <b>${lista}</b>.</p>`;
   }
   if (!opcoes.length) h += '<p class="vazio">As opções de hoje ainda não foram publicadas. Chame no WhatsApp!</p>';
   h += opcoes.map(o => {

@@ -32,6 +32,20 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .prato .preco{color:var(--tom);font-weight:800;font-size:17px;white-space:nowrap}
 .prato button{margin-left:auto;flex:none}
 .add{background:var(--tom);border-color:var(--tom);color:#fff;width:52px;font-size:26px;padding:0}
+.acomp{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.acomp div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:8px;text-align:center;font-weight:600;font-size:15px}
+.acomp img,.acomp .sem{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px;background:#F6E7DC}
+.acomp .sem{display:flex;align-items:center;justify-content:center;font-size:30px}
+.incl{font-size:14px;color:var(--mute);margin:-4px 0 12px}
+.opcao{background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:14px}
+.opcao img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#F6E7DC}
+.opcao .corpo{padding:14px 16px 16px}
+.opcao .nome{font-family:'Baloo 2',Inter,sans-serif;font-size:24px;font-weight:800;line-height:1.1}
+.opcao .desc{color:var(--mute);font-size:15px;margin-top:2px}
+.tams{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tams button{flex:1 1 30%;min-height:56px;border-color:#F3C9B8;line-height:1.15;padding:6px 8px}
+.tams button small{display:block;color:var(--tom);font-weight:800;font-size:15px}
+.tams button.ok{background:var(--ok);border-color:var(--ok);color:#fff}.tams button.ok small{color:#fff}
 .vazio,.erro{padding:18px;border-radius:14px;margin:18px 0}
 .erro{background:#FDE8E4;color:#8F2A13;font-weight:600}
 .vazio{color:var(--mute);text-align:center}
@@ -119,7 +133,7 @@ async function api(caminho, { metodo = 'GET', corpo, token } = {}) {
   return dados;
 }
 
-let produtos = [], bairros = [], carrinho = [], bairroSel = null;
+let produtos = [], bairros = [], cardapio = [], carrinho = [], bairroSel = null;
 try { carrinho = JSON.parse(sessionStorage.getItem('carrinho') || '[]'); } catch { carrinho = []; }
 const salvarCarrinho = () => { try { sessionStorage.setItem('carrinho', JSON.stringify(carrinho)); } catch {} };
 
@@ -129,12 +143,15 @@ document.title = C.nome + ' — Cardápio';
 
 async function carregar() {
   try {
-    [produtos, bairros] = await Promise.all([
+    [produtos, bairros, cardapio] = await Promise.all([
       api('/rest/v1/produtos?select=id,nome,categoria,preco_centavos,ordem&ativo=eq.true&order=ordem,nome'),
       api('/rest/v1/bairros?select=id,nome,taxa_centavos&ativo=eq.true&order=nome'),
+      api('/rest/v1/cardapio_itens?select=id,tipo,nome,descricao,foto_url,produtos_ids,ordem&ativo=eq.true&order=ordem,nome'),
     ]);
     // tira do carrinho o que saiu do cardápio e atualiza preços
-    carrinho = carrinho.filter(l => produtos.some(p => p.id === l.id)).map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)) }));
+    carrinho = carrinho
+      .filter(l => produtos.some(p => p.id === l.id) && (!l.opcaoId || cardapio.some(o => o.id === l.opcaoId)))
+      .map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)) }));
     $('#estado').textContent = 'Faça seu pedido pelo site 👇';
   } catch (e) {
     $('#estado').textContent = 'Sem conexão';
@@ -146,20 +163,43 @@ async function carregar() {
 }
 const pick = p => ({ nome: p.nome, preco: p.preco_centavos, categoria: p.categoria });
 
+function tamanhosDa(op) {
+  const marm = produtos.filter(p => p.categoria === 'marmitex');
+  return op.produtos_ids && op.produtos_ids.length ? marm.filter(p => op.produtos_ids.includes(p.id)) : marm;
+}
 function desenharMenu() {
-  if (!produtos.length) { $('#menu').innerHTML = '<p class="vazio">O cardápio de hoje ainda não foi publicado.</p>'; return; }
+  const acomps = cardapio.filter(c => c.tipo === 'acompanhamento');
+  const opcoes = cardapio.filter(c => c.tipo === 'opcao');
+  const avulsos = produtos.filter(p => p.categoria !== 'marmitex');
   let h = '';
-  for (const c of ['marmitex','bebida','outros']) {
-    const lista = produtos.filter(p => p.categoria === c);
-    if (!lista.length) continue;
-    h += `<h2 class="cat">${CATS[c]}</h2>` + lista.map(p => `
+  if (acomps.length) {
+    h += `<h2 class="cat">Cardápio de hoje</h2><p class="incl">Acompanhamentos que vêm em todas as marmitex:</p>
+      <div class="acomp">${acomps.map(a => `<div>${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy">` : '<span class="sem">🍽️</span>'}${esc(a.nome)}</div>`).join('')}</div>`;
+  }
+  h += `<h2 class="cat">Escolha sua opção</h2>`;
+  if (!opcoes.length) h += '<p class="vazio">As opções de hoje ainda não foram publicadas. Chame no WhatsApp!</p>';
+  h += opcoes.map(o => {
+    const tams = tamanhosDa(o);
+    return `<div class="opcao">${o.foto_url ? `<img src="${esc(o.foto_url)}" alt="${esc(o.nome)}" loading="lazy">` : ''}
+      <div class="corpo"><div class="nome">${esc(o.nome)}</div>${o.descricao ? `<div class="desc">${esc(o.descricao)}</div>` : ''}
+      <div class="tams">${tams.map(p => `<button data-op="${o.id}" data-tam="${p.id}" aria-label="${esc(p.nome)} de ${esc(o.nome)}">${esc(p.nome.replace(/^marmitex\s*/i, '') || p.nome)}<small>${reais(p.preco_centavos)}</small></button>`).join('') || '<span class="dica">Sem tamanhos disponíveis.</span>'}</div>
+      </div></div>`;
+  }).join('');
+  if (avulsos.length) {
+    h += `<h2 class="cat">Bebidas e outros</h2>` + avulsos.map(p => `
       <div class="prato"><div><div class="nome">${esc(p.nome)}</div><div class="preco">${reais(p.preco_centavos)}</div></div>
       <button class="add" data-add="${p.id}" aria-label="Adicionar ${esc(p.nome)}">+</button></div>`).join('');
   }
   $('#menu').innerHTML = h;
+  document.querySelectorAll('[data-tam]').forEach(b => b.onclick = () => {
+    const p = produtos.find(x => x.id === b.dataset.tam), o = cardapio.find(x => x.id === b.dataset.op);
+    carrinho.push({ id: p.id, ...pick(p), opcaoId: o.id, opcaoNome: o.nome, qtd: 1, obs: '' }); // cada toque = uma marmitex
+    salvarCarrinho(); desenharBarra();
+    const t = b.innerHTML; b.classList.add('ok'); b.innerHTML = 'Adicionada ✓'; setTimeout(() => { b.classList.remove('ok'); b.innerHTML = t; }, 900);
+  });
   document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
     const p = produtos.find(x => x.id === b.dataset.add);
-    carrinho.push({ id: p.id, ...pick(p), qtd: 1, obs: '' }); // cada toque = uma marmitex separada
+    carrinho.push({ id: p.id, ...pick(p), qtd: 1, obs: '' });
     salvarCarrinho(); desenharBarra();
     b.textContent = '✓'; setTimeout(() => b.textContent = '+', 700);
   });
@@ -186,11 +226,11 @@ function desenharPedido(erro) {
     <h2 id="tituloPedido">Seu pedido</h2>
     ${carrinho.map((l, i) => `
       <div class="linha">
-        <div><div class="n">${esc(l.nome)}</div><div class="dica">${l.qtd} × ${reais(l.preco)} = <b>${reais(l.qtd*l.preco)}</b></div></div>
+        <div><div class="n">${esc(l.nome)}${l.opcaoNome ? ` — ${esc(l.opcaoNome)}` : ''}</div><div class="dica">${l.qtd} × ${reais(l.preco)} = <b>${reais(l.qtd*l.preco)}</b></div></div>
         <div class="qtd"><button data-m="${i}" aria-label="Menos">−</button><b>${l.qtd}</b><button data-p="${i}" aria-label="Mais">+</button></div>
-        ${l.categoria === 'marmitex' ? `<input type="text" data-o="${i}" value="${esc(l.obs)}" maxlength="120" placeholder="Carne / observação (ex.: frango, sem salada)">` : ''}
+        ${l.categoria === 'marmitex' ? `<input type="text" data-o="${i}" value="${esc(l.obs)}" maxlength="120" placeholder="Observação (ex.: sem salada, pouco arroz)">` : ''}
       </div>`).join('') || '<p class="vazio">Seu pedido está vazio.</p>'}
-    <p class="dica">Quer duas marmitex com carnes diferentes? Toque de novo no + do cardápio: cada toque vira uma marmitex separada.</p>
+    <p class="dica">Quer outra marmitex? Feche e toque no tamanho de outra opção: cada toque vira uma marmitex separada.</p>
 
     <label for="fNome">Seu nome (opcional)</label>
     <input type="text" id="fNome" maxlength="60" value="${esc(form.nome)}" autocomplete="name">
@@ -264,14 +304,14 @@ async function pedir() {
   let r;
   try {
     r = await api('/rest/v1/rpc/criar_pedido_site', { metodo: 'POST', corpo: {
-      p_itens: carrinho.map(l => ({ produto_id: l.id, quantidade: l.qtd, observacao: l.obs })),
+      p_itens: carrinho.map(l => ({ produto_id: l.id, opcao_id: l.opcaoId || null, quantidade: l.qtd, observacao: l.obs })),
       p_bairro_id: bairroSel ? bairroSel.id : null,
       p_rua: form.rua, p_numero: form.numero, p_complemento: form.complemento, p_nome: form.nome,
     }});
   } catch (e) {
     enviando = false;
     // não registrou: oferece mandar só pelo WhatsApp (sem código)
-    const semCodigo = { codigo: null, itens: carrinho.map(l => ({ nome: l.nome, quantidade: l.qtd, observacao: l.obs, preco_centavos: l.preco })),
+    const semCodigo = { codigo: null, itens: carrinho.map(l => ({ nome: l.nome, quantidade: l.qtd, observacao: [l.opcaoNome, l.obs].filter(Boolean).join(' — '), preco_centavos: l.preco })),
       subtotal_centavos: subtotal(), taxa_centavos: bairroSel ? bairroSel.taxa_centavos : 0, bairro_nome: bairroSel ? bairroSel.nome : null };
     desenharPedido(e.message + ' Você ainda pode enviar pelo WhatsApp.');
     $('#pedir').textContent = 'Enviar só pelo WhatsApp';
@@ -333,13 +373,14 @@ async function desenharAdmin(msg) {
     ]);
   } catch (e) { token = null; try { sessionStorage.removeItem('adm'); } catch {} return desenharAdmin('Entre de novo (' + e.message + ').'); }
   el.innerHTML = `<h2 class="cat">Administrador</h2>
-    <p class="dica">O que você muda aqui aparece no cardápio e no aplicativo na hora. Pedidos já feitos guardam o preço antigo.</p>
+    <p class="dica">O que você muda aqui aparece no cardápio e no aplicativo na hora. Pedidos já feitos guardam o preço antigo. As opções e acompanhamentos do dia (com fotos) são montados pelo aplicativo, em "Cardápio do dia".</p>
     ${msg ? `<div class="erro" style="background:#E6F4EA;color:#1F5E33">${esc(msg)}</div>` : ''}
     <h3>Produtos</h3>
     <table><tbody>${prods.map(p => `<tr data-prod="${p.id}">
       <td><input type="text" value="${esc(p.nome)}" data-k="nome" aria-label="Nome"></td>
       <td class="num"><input type="text" value="${reais(p.preco_centavos).replace('R$ ','')}" data-k="preco" inputmode="decimal" aria-label="Preço"></td>
-      <td><label style="margin:0;display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" class="sw" data-k="ativo" ${p.ativo ? 'checked' : ''}> à venda</label></td>
+      <td><label style="margin:0;display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" class="sw" data-k="ativo" ${p.ativo ? 'checked' : ''}> à venda</label>
+        <label style="margin:4px 0 0;display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" class="sw" data-k="site" ${p.no_site ? 'checked' : ''}> no site</label></td>
       <td><button data-salvar-prod>Salvar</button> <button data-del-prod aria-label="Excluir">🗑</button></td></tr>`).join('')}
     </tbody></table>
     <div class="acoes"><input type="text" id="npNome" placeholder="Novo produto" style="flex:2"><input type="text" id="npPreco" placeholder="Preço" inputmode="decimal" style="flex:1">
@@ -360,7 +401,7 @@ async function desenharAdmin(msg) {
   const alertar = m => { const d = document.createElement('div'); d.className = 'erro'; d.textContent = m; el.prepend(d); scrollTo(0,0); };
   el.querySelectorAll('[data-salvar-prod]').forEach(b => b.onclick = () => { const tr = b.closest('tr'); const c = lerReais(val(tr,'preco').value);
     if (c === null) return alertar('Preço inválido. Ex.: 22,00');
-    fazer(() => api(`/rest/v1/produtos?id=eq.${tr.dataset.prod}`, { metodo: 'PATCH', token, corpo: { nome: val(tr,'nome').value.trim(), preco_centavos: c, ativo: val(tr,'ativo').checked } }), 'Produto salvo.'); });
+    fazer(() => api(`/rest/v1/produtos?id=eq.${tr.dataset.prod}`, { metodo: 'PATCH', token, corpo: { nome: val(tr,'nome').value.trim(), preco_centavos: c, ativo: val(tr,'ativo').checked, no_site: val(tr,'site').checked } }), 'Produto salvo.'); });
   el.querySelectorAll('[data-del-prod]').forEach(b => b.onclick = () => { const tr = b.closest('tr');
     if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Confirmar?'; return; }
     fazer(() => api(`/rest/v1/produtos?id=eq.${tr.dataset.prod}`, { metodo: 'DELETE', token }), 'Produto excluído.'); });

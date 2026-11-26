@@ -37,6 +37,15 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .acompanha b{color:var(--tom2)}
 .acompanha .ac{white-space:nowrap}
 .acompanha img{width:22px;height:22px;border-radius:50%;object-fit:cover;vertical-align:-5px;margin-right:4px;border:1px solid #F3C9B8}
+.topo .aberto.fechado{background:#2A1C14cc}
+.fechadoAviso{margin:16px 0 0;background:#FDE8E4;color:#8F2A13;border-radius:14px;padding:12px 14px;font-size:15px}
+.fechadoAviso a{color:#8F2A13;font-weight:700}
+.opcao .foto{position:relative}
+.opcao.esg img{filter:grayscale(.7) brightness(.85)}
+.carimbo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-8deg);background:#D7261E;color:#fff;font-family:'Baloo 2',Inter,sans-serif;font-weight:800;font-size:30px;letter-spacing:2px;padding:4px 18px;border-radius:10px;border:3px solid #fff;box-shadow:0 6px 18px #0004}
+.esgTxt{color:#D7261E;font-weight:800;font-size:15px}
+.opcao.esg .nome{color:var(--mute)}
+.zap:disabled{opacity:.45}
 .acomp{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
 .acomp div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:8px;text-align:center;font-weight:600;font-size:15px}
 .acomp img,.acomp .sem{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px;background:#F6E7DC}
@@ -103,6 +112,7 @@ footer a{color:var(--mute)}
   </div>
 </header>
 
+<div class="wrap"><div class="fechadoAviso" id="avisoFechado" hidden></div></div>
 <main class="wrap" id="menu"></main>
 <main class="wrap adm" id="admin" hidden></main>
 
@@ -138,7 +148,7 @@ async function api(caminho, { metodo = 'GET', corpo, token } = {}) {
   return dados;
 }
 
-let produtos = [], bairros = [], cardapio = [], carrinho = [], bairroSel = null;
+let produtos = [], bairros = [], cardapio = [], carrinho = [], bairroSel = null, loja = null;
 try { carrinho = JSON.parse(sessionStorage.getItem('carrinho') || '[]'); } catch { carrinho = []; }
 const salvarCarrinho = () => { try { sessionStorage.setItem('carrinho', JSON.stringify(carrinho)); } catch {} };
 
@@ -151,13 +161,14 @@ async function carregar() {
     [produtos, bairros, cardapio] = await Promise.all([
       api('/rest/v1/produtos?select=id,nome,categoria,preco_centavos,ordem&ativo=eq.true&order=ordem,nome'),
       api('/rest/v1/bairros?select=id,nome,taxa_centavos&ativo=eq.true&order=nome'),
-      api('/rest/v1/cardapio_itens?select=id,tipo,nome,descricao,foto_url,produtos_ids,ordem&ativo=eq.true&order=ordem,nome'),
+      api('/rest/v1/cardapio_itens?select=id,tipo,nome,descricao,foto_url,produtos_ids,ordem,esgotado&ativo=eq.true&order=ordem,nome'),
     ]);
+    try { loja = (await api('/rest/v1/configuracoes?select=pedidos_site_pausados,horarios&id=eq.1'))[0] || null; } catch { loja = null; }
     // tira do carrinho o que saiu do cardápio e atualiza preços
     carrinho = carrinho
-      .filter(l => produtos.some(p => p.id === l.id) && (!l.opcaoId || cardapio.some(o => o.id === l.opcaoId)))
+      .filter(l => produtos.some(p => p.id === l.id) && (!l.opcaoId || cardapio.some(o => o.id === l.opcaoId && !o.esgotado)))
       .map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)) }));
-    $('#estado').textContent = 'Faça seu pedido pelo site 👇';
+    mostrarEstado();
   } catch (e) {
     $('#estado').textContent = 'Sem conexão';
     $('#menu').innerHTML = `<div class="erro">Não conseguimos carregar o cardápio agora. ${C.whatsapp ? `<a href="https://wa.me/${C.whatsapp}">Peça pelo WhatsApp</a>.` : ''}</div>`;
@@ -166,6 +177,36 @@ async function carregar() {
   desenharMenu();
   desenharBarra();
 }
+// ---------- aberto / fechado (horário de São Paulo) ----------
+const DIAS = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+function agoraSP() {
+  const partes = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const v = t => (partes.find(p => p.type === t) || {}).value;
+  return { dia: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(v('weekday')), hora: v('hour') + ':' + v('minute') };
+}
+function estadoLoja() {
+  if (!loja) return { aberto: true };
+  if (loja.pedidos_site_pausados) return { aberto: false, msg: 'Pedidos pelo site fechados no momento.' };
+  const { dia, hora } = agoraSP();
+  const H = d => (loja.horarios || []).find(h => +h.dia === d);
+  const hoje = H(dia);
+  if (hoje && hoje.ativo && hora >= hoje.abre && hora < hoje.fecha) return { aberto: true, fecha: hoje.fecha };
+  if (hoje && hoje.ativo && hora < hoje.abre) return { aberto: false, msg: `Fechado agora. Abrimos hoje às ${hoje.abre}.` };
+  for (let k = 1; k <= 7; k++) {
+    const h = H((dia + k) % 7);
+    if (h && h.ativo) return { aberto: false, msg: `Fechado agora. Abrimos ${k === 1 ? 'amanhã' : DIAS[(dia + k) % 7]} às ${h.abre}.` };
+  }
+  return { aberto: false, msg: 'Fechado no momento.' };
+}
+function mostrarEstado() {
+  const e = estadoLoja();
+  $('#estado').textContent = e.aberto ? (e.fecha ? `Aberto agora · pedidos até ${e.fecha}` : 'Faça seu pedido pelo site 👇') : 'Fechado agora';
+  $('#estado').classList.toggle('fechado', !e.aberto);
+  $('#avisoFechado').hidden = e.aberto;
+  $('#avisoFechado').innerHTML = e.aberto ? '' : `<b>${esc(e.msg)}</b> Você pode ver o cardápio, mas os pedidos pelo site estão pausados.${C.whatsapp ? ` <a href="https://wa.me/${C.whatsapp}">Falar no WhatsApp</a>` : ''}`;
+}
+setInterval(() => { if (produtos.length) mostrarEstado(); }, 60000);
+
 const pick = p => ({ nome: p.nome, preco: p.preco_centavos, categoria: p.categoria });
 
 function tamanhosDa(op) {
@@ -188,9 +229,10 @@ function desenharMenu() {
   if (!opcoes.length) h += '<p class="vazio">As opções de hoje ainda não foram publicadas. Chame no WhatsApp!</p>';
   h += opcoes.map(o => {
     const tams = tamanhosDa(o);
-    return `<div class="opcao">${o.foto_url ? `<img src="${esc(o.foto_url)}" alt="${esc(o.nome)}" loading="lazy">` : ''}
-      <div class="corpo"><div class="nome">${esc(o.nome)}</div>${o.descricao ? `<div class="desc">${esc(o.descricao)}</div>` : ''}
-      <div class="tams">${tams.map(p => `<button data-op="${o.id}" data-tam="${p.id}" aria-label="${esc(p.nome)} de ${esc(o.nome)}">${esc(p.nome.replace(/^marmitex\s*/i, '') || p.nome)}<small>${reais(p.preco_centavos)}</small></button>`).join('') || '<span class="dica">Sem tamanhos disponíveis.</span>'}</div>
+    const esg = !!o.esgotado;
+    return `<div class="opcao${esg ? ' esg' : ''}">${o.foto_url ? `<div class="foto"><img src="${esc(o.foto_url)}" alt="${esc(o.nome)}" loading="lazy">${esg ? '<span class="carimbo">ESGOTADO</span>' : ''}</div>` : ''}
+      <div class="corpo"><div class="nome">${esc(o.nome)}${esg && !o.foto_url ? ' <span class="esgTxt">ESGOTADO</span>' : ''}</div>${o.descricao ? `<div class="desc">${esc(o.descricao)}</div>` : ''}
+      <div class="tams">${esg ? '<span class="esgTxt">Acabou por hoje. Escolha outra opção.</span>' : tams.map(p => `<button data-op="${o.id}" data-tam="${p.id}" aria-label="${esc(p.nome)} de ${esc(o.nome)}">${esc(p.nome.replace(/^marmitex\s*/i, '') || p.nome)}<small>${reais(p.preco_centavos)}</small></button>`).join('') || '<span class="dica">Sem tamanhos disponíveis.</span>'}</div>
       </div></div>`;
   }).join('');
   if (avulsos.length) {
@@ -260,7 +302,8 @@ function desenharPedido(erro) {
       <div class="t"><span>Total</span><span>${reais(subtotal() + taxa)}</span></div>
     </div>
     ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
-    <button class="zap" id="pedir" ${carrinho.length ? '' : 'disabled'}>Pedir pelo WhatsApp</button>
+    ${estadoLoja().aberto ? '' : `<div class="erro">${esc(estadoLoja().msg)}</div>`}
+    <button class="zap" id="pedir" ${carrinho.length && estadoLoja().aberto ? '' : 'disabled'}>Pedir pelo WhatsApp</button>
     <p class="dica" style="text-align:center">Vamos abrir o WhatsApp com seu pedido pronto. É só tocar em enviar.</p>`;
 
   $('#fechar').onclick = fecharPainel;
@@ -307,6 +350,8 @@ async function pedir() {
   if (enviando) return;
   guardarForm();
   if (!C.whatsapp) return desenharPedido('O WhatsApp do restaurante ainda não foi configurado.');
+  const est = estadoLoja();
+  if (!est.aberto) return desenharPedido(est.msg + ' Chame no WhatsApp se precisar.');
   enviando = true;
   $('#pedir').textContent = 'Registrando pedido…';
   let r;

@@ -24,6 +24,7 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .topo{background:radial-gradient(120% 90% at 100% 0,#D9572F,transparent 60%),var(--tom);color:#fff;padding:28px max(5vw,18px) 34px;position:relative}
 .topo h1{font-size:clamp(34px,9vw,52px)}
 .topo p{margin:4px 0 0;color:#FFE3D6;font-size:17px}
+.topo .cidade{display:inline-block;margin-top:6px;font-weight:800;font-size:15px;letter-spacing:.5px;color:#fff;background:#00000026;padding:3px 10px;border-radius:8px}
 .topo .aberto{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;background:#ffffff26;padding:5px 10px;border-radius:99px}
 .wrap{max-width:720px;margin:0 auto;padding:0 max(4vw,14px)}
 .cat{margin:26px 0 10px;font-size:24px}
@@ -33,7 +34,28 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .prato button{margin-left:auto;flex:none}
 .add{background:var(--tom);border-color:var(--tom);color:#fff;width:52px;font-size:26px;padding:0}
 .principal{font-size:30px;margin-top:24px}
-.acompanha{margin:2px 0 16px;font-size:17px;line-height:1.45;color:var(--ink);background:#FFF1E8;border-left:4px solid var(--tom);border-radius:10px;padding:10px 14px}
+.secOpcoes{position:relative}
+.cat.menor{font-size:20px;margin-top:30px;color:var(--mute)}
+.extras{display:grid;gap:8px}
+.extra{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.extra img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none;background:#F6E7DC}
+.extra .info{flex:1;min-width:0}
+.extra .nome{font-weight:700;font-size:16px}
+.extra .preco{color:var(--tom);font-weight:800;font-size:15px}
+.extra .add{width:44px;min-height:44px;font-size:22px;flex:none}
+.extra.esg{opacity:.75}.extra.esg img{filter:grayscale(1)}
+.modo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modo button{min-height:52px;font-size:16px}
+.modo button.on{background:var(--tom);border-color:var(--tom);color:#fff}
+.acompanha.colado{font-size:13.5px;line-height:1.35;padding:6px 12px;border-radius:0 0 10px 10px;margin-left:-4px;margin-right:-4px;background:#FFF1E8f2;backdrop-filter:blur(4px)}
+.acompanha.colado img{width:16px;height:16px;vertical-align:-3px}
+.acompanha{transition:font-size .2s,padding .2s}
+.rolar{white-space:nowrap;position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:6;background:#2A1C14e6;color:#fff;border-radius:99px;padding:8px 16px 6px;display:flex;flex-direction:column;align-items:center;font-size:14px;font-weight:700;transition:opacity .35s,transform .35s}
+.rolar b{font-size:24px;line-height:.7;margin-top:2px}
+.rolar.on{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:no-preference){.rolar.on b{animation:quica .8s ease-in-out infinite}}
+@keyframes quica{50%{transform:translateY(5px)}}
+.acompanha{position:sticky;top:0;z-index:3;box-shadow:0 6px 14px -10px #2A1C1466;margin:2px 0 16px;font-size:17px;line-height:1.45;color:var(--ink);background:#FFF1E8;border-left:4px solid var(--tom);border-radius:10px;padding:10px 14px}
 .acompanha b{color:var(--tom2)}
 .acompanha .ac{white-space:nowrap}
 .acompanha img{width:22px;height:22px;border-radius:50%;object-fit:cover;vertical-align:-5px;margin-right:4px;border:1px solid #F3C9B8}
@@ -107,6 +129,7 @@ footer a{color:var(--mute)}
 <header class="topo">
   <div class="wrap" style="padding:0">
     <h1 id="nome">Cardápio</h1>
+    <div class="cidade" id="cidade">📍 ITAJUBÁ – MG</div>
     <p id="sub"></p>
     <span class="aberto" id="estado">Carregando cardápio…</span>
   </div>
@@ -118,6 +141,7 @@ footer a{color:var(--mute)}
 
 <footer><a href="#admin" id="linkAdmin">Área do administrador</a></footer>
 
+<div class="rolar" id="rolar" aria-hidden="true"><span>Role para ver o cardápio</span><b>⌄</b></div>
 <div class="barra" id="barra"><button class="pri" id="verPedido">Ver meu pedido</button></div>
 
 <div class="painel" id="painel" role="dialog" aria-modal="true" aria-labelledby="tituloPedido">
@@ -153,21 +177,22 @@ try { carrinho = JSON.parse(sessionStorage.getItem('carrinho') || '[]'); } catch
 const salvarCarrinho = () => { try { sessionStorage.setItem('carrinho', JSON.stringify(carrinho)); } catch {} };
 
 $('#nome').textContent = C.nome;
+if (C.cidade) $('#cidade').textContent = '📍 ' + C.cidade;
 $('#sub').textContent = C.subtitulo;
 document.title = C.nome + ' — Cardápio';
 
 async function carregar() {
   try {
     [produtos, bairros, cardapio] = await Promise.all([
-      api('/rest/v1/produtos?select=id,nome,categoria,preco_centavos,ordem&ativo=eq.true&order=ordem,nome'),
+      api('/rest/v1/produtos?select=id,nome,categoria,preco_centavos,ordem,no_site&ativo=eq.true&order=ordem,nome'),
       api('/rest/v1/bairros?select=id,nome,taxa_centavos&ativo=eq.true&order=nome'),
-      api('/rest/v1/cardapio_itens?select=id,tipo,nome,descricao,foto_url,produtos_ids,ordem,esgotado&ativo=eq.true&order=ordem,nome'),
+      api('/rest/v1/cardapio_itens?select=id,tipo,nome,descricao,foto_url,produtos_ids,ordem,esgotado,produto_id&ativo=eq.true&order=ordem,nome'),
     ]);
     try { loja = (await api('/rest/v1/configuracoes?select=pedidos_site_pausados,horarios&id=eq.1'))[0] || null; } catch { loja = null; }
     // tira do carrinho o que saiu do cardápio e atualiza preços
     carrinho = carrinho
       .filter(l => produtos.some(p => p.id === l.id) && (!l.opcaoId || cardapio.some(o => o.id === l.opcaoId && !o.esgotado)))
-      .map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)) }));
+      .map(l => ({ ...l, ...pick(produtos.find(p => p.id === l.id)), nome: l.opcaoId ? produtos.find(p => p.id === l.id).nome : (l.nome || produtos.find(p => p.id === l.id).nome) }));
     mostrarEstado();
   } catch (e) {
     $('#estado').textContent = 'Sem conexão';
@@ -213,18 +238,35 @@ function tamanhosDa(op) {
   const marm = produtos.filter(p => p.categoria === 'marmitex');
   return op.produtos_ids && op.produtos_ids.length ? marm.filter(p => op.produtos_ids.includes(p.id)) : marm;
 }
+const produtoDe = id => produtos.find(p => p.id === id);
+function linhaExtra(x) {
+  const p = produtoDe(x.produto_id);
+  if (!p) return '';
+  const esg = !!x.esgotado;
+  return `<div class="extra${esg ? ' esg' : ''}">
+    ${x.foto_url ? `<img src="${esc(x.foto_url)}" alt="" loading="lazy">` : ''}
+    <div class="info"><div class="nome">${esc(x.nome)}</div><div class="preco">${esg ? '<span class="esgTxt">ESGOTADO</span>' : reais(p.preco_centavos)}</div></div>
+    ${esg ? '' : `<button class="add" data-extra="${x.id}" aria-label="Adicionar ${esc(x.nome)}">+</button>`}</div>`;
+}
 function desenharMenu() {
   const acomps = cardapio.filter(c => c.tipo === 'acompanhamento');
   const opcoes = cardapio.filter(c => c.tipo === 'opcao');
-  const avulsos = produtos.filter(p => p.categoria !== 'marmitex');
-  let h = '';
+  const bebidas = cardapio.filter(c => c.tipo === 'bebida_doce' && produtoDe(c.produto_id));
+  const adicionais = cardapio.filter(c => c.tipo === 'adicional' && produtoDe(c.produto_id));
+  // produtos marcados "no site" que não estão no cardápio do dia continuam aparecendo
+  const ligados = new Set(cardapio.filter(c => c.produto_id).map(c => c.produto_id));
+  const soltos = produtos.filter(p => p.categoria !== 'marmitex' && !ligados.has(p.id) && p.no_site !== false)
+    .map(p => ({ id: 'p:' + p.id, tipo: p.categoria === 'bebida' ? 'bebida_doce' : 'adicional', nome: p.nome, produto_id: p.id }));
+  const listaBeb = bebidas.concat(soltos.filter(x => x.tipo === 'bebida_doce'));
+  const listaAdi = adicionais.concat(soltos.filter(x => x.tipo === 'adicional'));
+  let h = '<section class="secOpcoes">';
   h += `<h2 class="cat principal">Escolha sua opção</h2>`;
   if (acomps.length) {
     // nome em destaque; se tiver foto, ela fica pequenininha no cantinho, ao lado do nome
     const item = a => `<span class="ac">${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy">` : ''}${esc(a.nome)}</span>`;
     const partes = acomps.map(item);
     const lista = partes.length > 1 ? partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1] : partes[0];
-    h += `<p class="acompanha">Todas acompanham <b>${lista}</b>.</p>`;
+    h += `<div id="marcaAcomp"></div><p class="acompanha" id="acompanha">Todas acompanham <b>${lista}</b>.</p>`;
   }
   if (!opcoes.length) h += '<p class="vazio">As opções de hoje ainda não foram publicadas. Chame no WhatsApp!</p>';
   h += opcoes.map(o => {
@@ -235,21 +277,28 @@ function desenharMenu() {
       <div class="tams">${esg ? '<span class="esgTxt">Acabou por hoje. Escolha outra opção.</span>' : tams.map(p => `<button data-op="${o.id}" data-tam="${p.id}" aria-label="${esc(p.nome)} de ${esc(o.nome)}">${esc(p.nome.replace(/^marmitex\s*/i, '') || p.nome)}<small>${reais(p.preco_centavos)}</small></button>`).join('') || '<span class="dica">Sem tamanhos disponíveis.</span>'}</div>
       </div></div>`;
   }).join('');
-  if (avulsos.length) {
-    h += `<h2 class="cat">Bebidas e outros</h2>` + avulsos.map(p => `
-      <div class="prato"><div><div class="nome">${esc(p.nome)}</div><div class="preco">${reais(p.preco_centavos)}</div></div>
-      <button class="add" data-add="${p.id}" aria-label="Adicionar ${esc(p.nome)}">+</button></div>`).join('');
-  }
+  h += '</section>';
+  if (listaBeb.length) h += `<h2 class="cat menor">Bebidas e doces</h2><div class="extras">${listaBeb.map(linhaExtra).join('')}</div>`;
+  if (listaAdi.length) h += `<h2 class="cat menor">Adicionais</h2><div class="extras">${listaAdi.map(linhaExtra).join('')}</div>`;
   $('#menu').innerHTML = h;
+  // enquanto rola pelos pratos, a frase dos acompanhamentos desce junto, menor, sem roubar o foco
+  if (window.__obsAcomp) window.__obsAcomp.disconnect();
+  const marca = $('#marcaAcomp'), ac = $('#acompanha');
+  if (marca && ac && 'IntersectionObserver' in window) {
+    window.__obsAcomp = new IntersectionObserver(([e]) => ac.classList.toggle('colado', !e.isIntersecting && e.boundingClientRect.top < 0));
+    window.__obsAcomp.observe(marca);
+  }
+  window.__extras = listaBeb.concat(listaAdi);
   document.querySelectorAll('[data-tam]').forEach(b => b.onclick = () => {
     const p = produtos.find(x => x.id === b.dataset.tam), o = cardapio.find(x => x.id === b.dataset.op);
     carrinho.push({ id: p.id, ...pick(p), opcaoId: o.id, opcaoNome: o.nome, qtd: 1, obs: '' }); // cada toque = uma marmitex
     salvarCarrinho(); desenharBarra();
     const t = b.innerHTML; b.classList.add('ok'); b.innerHTML = 'Adicionada ✓'; setTimeout(() => { b.classList.remove('ok'); b.innerHTML = t; }, 900);
   });
-  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
-    const p = produtos.find(x => x.id === b.dataset.add);
-    carrinho.push({ id: p.id, ...pick(p), qtd: 1, obs: '' });
+  document.querySelectorAll('[data-extra]').forEach(b => b.onclick = () => {
+    const x = window.__extras.find(e => e.id === b.dataset.extra), p = produtoDe(x.produto_id);
+    const linha = carrinho.find(l => l.id === p.id && !l.opcaoId);
+    if (linha) { if (linha.qtd < 20) linha.qtd++; } else carrinho.push({ id: p.id, ...pick(p), nome: x.nome, qtd: 1, obs: '' });
     salvarCarrinho(); desenharBarra();
     b.textContent = '✓'; setTimeout(() => b.textContent = '+', 700);
   });
@@ -264,13 +313,14 @@ function desenharBarra() {
 
 // ---------- painel do pedido ----------
 let form = { nome: '', bairroTexto: '', rua: '', numero: '', complemento: '' };
+let retirada = false;
 function abrirPedido() { $('#painel').classList.add('on'); desenharPedido(); }
 function fecharPainel() { $('#painel').classList.remove('on'); }
 $('#verPedido').onclick = abrirPedido;
 $('#painel').onclick = e => { if (e.target.id === 'painel') fecharPainel(); };
 
 function desenharPedido(erro) {
-  const taxa = bairroSel ? bairroSel.taxa_centavos : 0;
+  const taxa = !retirada && bairroSel ? bairroSel.taxa_centavos : 0;
   $('#folha').innerHTML = `
     <button class="fechar" id="fechar">Fechar ✕</button>
     <h2 id="tituloPedido">Seu pedido</h2>
@@ -285,6 +335,12 @@ function desenharPedido(erro) {
     <label for="fNome">Seu nome (opcional)</label>
     <input type="text" id="fNome" maxlength="60" value="${esc(form.nome)}" autocomplete="name">
 
+    <label>Como quer receber?</label>
+    <div class="modo">
+      <button id="mEntrega" class="${retirada ? '' : 'on'}" aria-pressed="${!retirada}">🛵 Entrega</button>
+      <button id="mRetira" class="${retirada ? 'on' : ''}" aria-pressed="${retirada}">🏪 Retirar no local</button>
+    </div>
+    ${retirada ? '<p class="dica">Você retira no restaurante. Avisamos pelo WhatsApp quando estiver pronto.</p>' : `
     <label for="fBairro">Bairro para entrega</label>
     <input type="search" id="fBairro" value="${esc(bairroSel ? bairroSel.nome : form.bairroTexto)}" placeholder="Digite seu bairro" autocomplete="off">
     <div id="sug"></div>
@@ -294,11 +350,11 @@ function desenharPedido(erro) {
       <div><label for="fNum">Número</label><input type="text" id="fNum" maxlength="20" value="${esc(form.numero)}" inputmode="numeric"></div>
     </div>
     <label for="fComp">Complemento / referência (opcional)</label>
-    <input type="text" id="fComp" maxlength="120" value="${esc(form.complemento)}">
+    <input type="text" id="fComp" maxlength="120" value="${esc(form.complemento)}">`}
 
     <div class="tot">
       <div><span>Produtos</span><span>${reais(subtotal())}</span></div>
-      <div><span>Entrega</span><span>${bairroSel ? reais(taxa) : 'a combinar'}</span></div>
+      <div><span>Entrega</span><span>${retirada ? 'retirada no local' : bairroSel ? reais(taxa) : 'a combinar'}</span></div>
       <div class="t"><span>Total</span><span>${reais(subtotal() + taxa)}</span></div>
     </div>
     ${erro ? `<div class="erro">${esc(erro)}</div>` : ''}
@@ -310,14 +366,19 @@ function desenharPedido(erro) {
   document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const l = carrinho[+b.dataset.m]; l.qtd--; if (l.qtd < 1) carrinho.splice(+b.dataset.m, 1); salvarCarrinho(); desenharBarra(); guardarForm(); desenharPedido(); });
   document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const l = carrinho[+b.dataset.p]; if (l.qtd < 20) l.qtd++; salvarCarrinho(); desenharBarra(); guardarForm(); desenharPedido(); });
   document.querySelectorAll('[data-o]').forEach(i => i.oninput = () => { carrinho[+i.dataset.o].obs = i.value; salvarCarrinho(); });
+  $('#mEntrega').onclick = () => { guardarForm(); retirada = false; desenharPedido(); };
+  $('#mRetira').onclick = () => { guardarForm(); retirada = true; desenharPedido(); };
   const fb = $('#fBairro');
-  fb.oninput = () => { bairroSel = null; form.bairroTexto = fb.value; sugerir(fb.value); };
-  fb.onfocus = () => sugerir(fb.value);
+  if (fb) {
+    fb.oninput = () => { bairroSel = null; form.bairroTexto = fb.value; sugerir(fb.value); };
+    fb.onfocus = () => sugerir(fb.value);
+  }
   $('#pedir').onclick = pedir;
 }
 function guardarForm() {
   if (!$('#fNome')) return;
-  form = { nome: $('#fNome').value, bairroTexto: $('#fBairro').value, rua: $('#fRua').value, numero: $('#fNum').value, complemento: $('#fComp').value };
+  form.nome = $('#fNome').value;
+  if ($('#fBairro')) Object.assign(form, { bairroTexto: $('#fBairro').value, rua: $('#fRua').value, numero: $('#fNum').value, complemento: $('#fComp').value });
 }
 const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 function sugerir(t) {
@@ -337,11 +398,11 @@ function mensagem(r) {
     r.codigo ? `Olá! Quero fazer o pedido *${cod(r.codigo)}* pelo cardápio:` : 'Olá! Quero fazer este pedido pelo cardápio:',
     '', ...linhas, '',
     `Produtos: ${reais(r.subtotal_centavos)}`,
-    r.bairro_nome ? `Entrega (${r.bairro_nome}): ${reais(r.taxa_centavos)}` : 'Entrega: a combinar',
+    r.retirada ? null : r.bairro_nome ? `Entrega (${r.bairro_nome}): ${reais(r.taxa_centavos)}` : 'Entrega: a combinar',
     `*Total: ${reais(r.subtotal_centavos + (r.taxa_centavos || 0))}*`, '',
-    `Endereço: ${end || 'vou informar aqui'}`,
+    r.retirada ? '🏪 *RETIRADA NO LOCAL*' : `Endereço: ${end || 'vou informar aqui'}`,
     form.nome ? `Nome: ${form.nome}` : '',
-  ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
+  ].filter(l => l !== null).filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
 }
 const linkZap = txt => `https://wa.me/${C.whatsapp}?text=${encodeURIComponent(txt)}`;
 
@@ -358,14 +419,15 @@ async function pedir() {
   try {
     r = await api('/rest/v1/rpc/criar_pedido_site', { metodo: 'POST', corpo: {
       p_itens: carrinho.map(l => ({ produto_id: l.id, opcao_id: l.opcaoId || null, quantidade: l.qtd, observacao: l.obs })),
-      p_bairro_id: bairroSel ? bairroSel.id : null,
-      p_rua: form.rua, p_numero: form.numero, p_complemento: form.complemento, p_nome: form.nome,
+      p_bairro_id: !retirada && bairroSel ? bairroSel.id : null,
+      p_rua: retirada ? '' : form.rua, p_numero: retirada ? '' : form.numero, p_complemento: retirada ? '' : form.complemento, p_nome: form.nome,
+      p_retirada: retirada,
     }});
   } catch (e) {
     enviando = false;
     // não registrou: oferece mandar só pelo WhatsApp (sem código)
     const semCodigo = { codigo: null, itens: carrinho.map(l => ({ nome: l.nome, quantidade: l.qtd, observacao: [l.opcaoNome, l.obs].filter(Boolean).join(' — '), preco_centavos: l.preco })),
-      subtotal_centavos: subtotal(), taxa_centavos: bairroSel ? bairroSel.taxa_centavos : 0, bairro_nome: bairroSel ? bairroSel.nome : null };
+      subtotal_centavos: subtotal(), taxa_centavos: !retirada && bairroSel ? bairroSel.taxa_centavos : 0, bairro_nome: !retirada && bairroSel ? bairroSel.nome : null, retirada };
     desenharPedido(e.message + ' Você ainda pode enviar pelo WhatsApp.');
     $('#pedir').textContent = 'Enviar só pelo WhatsApp';
     $('#pedir').onclick = () => { location.href = linkZap(mensagem(semCodigo)); };
@@ -378,7 +440,7 @@ async function pedir() {
     <div class="ok">
       <p class="dica">Seu pedido foi registrado</p>
       <div class="cod">${cod(r.codigo)}</div>
-      <p>Total: <b>${reais(r.total_centavos)}</b>${r.bairro_nome ? '' : ' + entrega a combinar'}</p>
+      <p>Total: <b>${reais(r.total_centavos)}</b>${r.retirada ? ' · retirada no local' : r.bairro_nome ? '' : ' + entrega a combinar'}</p>
       <a href="${linkZap(txt)}"><button class="zap">Abrir o WhatsApp e enviar</button></a>
       <p class="dica">Se o WhatsApp não abriu, toque no botão acima. Envie a mensagem para confirmarmos seu pedido.</p>
       <button id="novo" style="margin-top:10px">Fazer outro pedido</button>
@@ -473,7 +535,15 @@ async function desenharAdmin(msg) {
   $('#sair').onclick = () => { token = null; try { sessionStorage.removeItem('adm'); } catch {} location.hash = ''; };
 }
 
-carregar().then(rota);
+carregar().then(rota).then(() => {
+  // seta animada de "role para baixo": aparece rapidinho e some
+  const r = $('#rolar');
+  if (location.hash === '#admin' || document.documentElement.scrollHeight <= innerHeight + 40) return;
+  r.classList.add('on');
+  const some = () => r.classList.remove('on');
+  setTimeout(some, 2400);
+  addEventListener('scroll', some, { once: true, passive: true });
+});
 }
 </script>
 </body>

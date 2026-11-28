@@ -6,5 +6,7 @@ window.CONFIG = {
   whatsapp: '5535999410532',
   supabaseUrl: 'https://ovkqqocwdzzirylkezut.supabase.co',
   supabaseKey: 'sb_publishable_4Cj3ngnHGJWS3xahsIwYPg_aoPlKQbU',
+  // Endereço para retirada no local (aparece no site com botão do Google Maps). Deixe '' para esconder.
+  enderecoRetirada: '',
   emailAdmin: 'sabordecasa@minhamarmitaria.com',
 };

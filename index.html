@@ -44,6 +44,9 @@ button:focus-visible,input:focus-visible{outline:3px solid #F2A541;outline-offse
 .extra .preco{color:var(--tom);font-weight:800;font-size:15px}
 .extra .add{width:44px;min-height:44px;font-size:22px;flex:none}
 .extra.esg{opacity:.75}.extra.esg img{filter:grayscale(1)}
+.retira{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
+.retira .end{font-size:16px;line-height:1.4}
+.retira .mapa{display:flex;align-items:center;justify-content:center;min-height:48px;margin-top:10px;border-radius:12px;background:#1A73E8;color:#fff;font-weight:700;text-decoration:none}
 .modo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .modo button{min-height:52px;font-size:16px}
 .modo button.on{background:var(--tom);border-color:var(--tom);color:#fff}
@@ -340,7 +343,9 @@ function desenharPedido(erro) {
       <button id="mEntrega" class="${retirada ? '' : 'on'}" aria-pressed="${!retirada}">🛵 Entrega</button>
       <button id="mRetira" class="${retirada ? 'on' : ''}" aria-pressed="${retirada}">🏪 Retirar no local</button>
     </div>
-    ${retirada ? '<p class="dica">Você retira no restaurante. Avisamos pelo WhatsApp quando estiver pronto.</p>' : `
+    ${retirada ? `<div class="retira">${C.enderecoRetirada ? `<div class="end">📍 <b>${esc(C.enderecoRetirada)}</b></div>
+        <a class="mapa" href="${linkMapa()}" target="_blank" rel="noopener">🗺️ Abrir no Google Maps</a>` : ''}
+        <p class="dica">Você retira no restaurante. Avisamos pelo WhatsApp quando estiver pronto.</p></div>` : `
     <label for="fBairro">Bairro para entrega</label>
     <input type="search" id="fBairro" value="${esc(bairroSel ? bairroSel.nome : form.bairroTexto)}" placeholder="Digite seu bairro" autocomplete="off">
     <div id="sug"></div>
@@ -404,6 +409,7 @@ function mensagem(r) {
     form.nome ? `Nome: ${form.nome}` : '',
   ].filter(l => l !== null).filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n').trim();
 }
+const linkMapa = () => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(C.enderecoRetirada + (/itajub/i.test(C.enderecoRetirada) ? '' : ', Itajubá - MG'))}`;
 const linkZap = txt => `https://wa.me/${C.whatsapp}?text=${encodeURIComponent(txt)}`;
 
 let enviando = false;
@@ -442,6 +448,7 @@ async function pedir() {
       <div class="cod">${cod(r.codigo)}</div>
       <p>Total: <b>${reais(r.total_centavos)}</b>${r.retirada ? ' · retirada no local' : r.bairro_nome ? '' : ' + entrega a combinar'}</p>
       <a href="${linkZap(txt)}"><button class="zap">Abrir o WhatsApp e enviar</button></a>
+      ${r.retirada && C.enderecoRetirada ? `<div class="retira" style="text-align:left;margin-top:14px"><div class="end">Retire em: 📍 <b>${esc(C.enderecoRetirada)}</b></div><a class="mapa" href="${linkMapa()}" target="_blank" rel="noopener">🗺️ Abrir no Google Maps</a></div>` : ''}
       <p class="dica">Se o WhatsApp não abriu, toque no botão acima. Envie a mensagem para confirmarmos seu pedido.</p>
       <button id="novo" style="margin-top:10px">Fazer outro pedido</button>
     </div>`;

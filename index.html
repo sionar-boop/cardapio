@@ -343,9 +343,8 @@ function desenharPedido(erro) {
       <button id="mEntrega" class="${retirada ? '' : 'on'}" aria-pressed="${!retirada}">🛵 Entrega</button>
       <button id="mRetira" class="${retirada ? 'on' : ''}" aria-pressed="${retirada}">🏪 Retirar no local</button>
     </div>
-    ${retirada ? `<div class="retira">${C.enderecoRetirada ? `<div class="end">📍 <b>${esc(C.enderecoRetirada)}</b></div>
-        <a class="mapa" href="${linkMapa()}" target="_blank" rel="noopener">🗺️ Abrir no Google Maps</a>` : ''}
-        <p class="dica">Você retira no restaurante. Avisamos pelo WhatsApp quando estiver pronto.</p></div>` : `
+    ${retirada ? `<div class="retira">${C.enderecoRetirada ? `<div class="end">Retire em: 📍 <b>${esc(C.enderecoRetirada)}</b></div>` : ''}
+        <p class="dica">Depois do pedido, enviamos a localização pelo WhatsApp e avisamos quando estiver pronto.</p></div>` : `
     <label for="fBairro">Bairro para entrega</label>
     <input type="search" id="fBairro" value="${esc(bairroSel ? bairroSel.nome : form.bairroTexto)}" placeholder="Digite seu bairro" autocomplete="off">
     <div id="sug"></div>
@@ -448,7 +447,7 @@ async function pedir() {
       <div class="cod">${cod(r.codigo)}</div>
       <p>Total: <b>${reais(r.total_centavos)}</b>${r.retirada ? ' · retirada no local' : r.bairro_nome ? '' : ' + entrega a combinar'}</p>
       <a href="${linkZap(txt)}"><button class="zap">Abrir o WhatsApp e enviar</button></a>
-      ${r.retirada && C.enderecoRetirada ? `<div class="retira" style="text-align:left;margin-top:14px"><div class="end">Retire em: 📍 <b>${esc(C.enderecoRetirada)}</b></div><a class="mapa" href="${linkMapa()}" target="_blank" rel="noopener">🗺️ Abrir no Google Maps</a></div>` : ''}
+      ${r.retirada && C.enderecoRetirada ? `<div class="retira" style="text-align:left;margin-top:14px"><div class="end">Retire em: 📍 <b>${esc(C.enderecoRetirada)}</b></div><p class="dica">A localização será enviada pelo WhatsApp.</p></div>` : ''}
       <p class="dica">Se o WhatsApp não abriu, toque no botão acima. Envie a mensagem para confirmarmos seu pedido.</p>
       <button id="novo" style="margin-top:10px">Fazer outro pedido</button>
     </div>`;

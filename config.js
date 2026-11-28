@@ -7,6 +7,6 @@ window.CONFIG = {
   supabaseUrl: 'https://ovkqqocwdzzirylkezut.supabase.co',
   supabaseKey: 'sb_publishable_4Cj3ngnHGJWS3xahsIwYPg_aoPlKQbU',
   // Endereço para retirada no local (aparece no site com botão do Google Maps). Deixe '' para esconder.
-  enderecoRetirada: '',
+  enderecoRetirada: 'Av. Padre Lourenço da Costa, 1509 – São Sebastião, Itajubá - MG',
   emailAdmin: 'sabordecasa@minhamarmitaria.com',
 };
